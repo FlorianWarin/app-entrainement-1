@@ -1,0 +1,37 @@
+services:
+  db:
+    # POSTGRES_VERSION depuis variable d'environnement
+    image: postgres:${POSTGRES_VERSION:-}
+    container_name: ${APP_NAME:-app}_db
+    environment:
+      POSTGRES_USER: ${PSQL_USER:-user}
+      POSTGRES_PASSWORD: ${PSQL_PASSWORD:-password}
+      POSTGRES_DB: ${PSQL_DATABASE:-dbname}
+    ports:
+      - "${PSQL_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PSQL_USER:-user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+  app:
+    build: .
+    container_name: ${APP_NAME:-app}_web
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      DATABASE_URL: postgresql://${PSQL_USER:-user}:${PSQL_PASSWORD:-password}@db:5432/${PSQL_DATABASE:-dbname}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
